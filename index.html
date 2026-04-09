@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBD 2026 — School QR Code Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { margin: 0; padding: 20px; background-color: #f0f4f8; font-family: 'Oswald', Arial, sans-serif; color: #000000; font-weight: 500; min-height: 100vh; }
+
+        .page-container { width: 100%; max-width: 1400px; margin: 0 auto; }
+
+        .page-header { background-color: #004080; color: #ffffff; padding: 25px 30px; text-align: center; margin-bottom: 15px; border-radius: 8px 8px 0 0; }
+        .logo-row { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 15px; }
+        .logo-box { background: #ffffff; border-radius: 8px; overflow: hidden; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+        .logo-box img { width: 100%; height: 100%; object-fit: cover; }
+        .page-header h3 { margin: 12px 0 5px; font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+        .page-header .tagline { margin: 0; font-size: 10px; font-weight: 500; }
+        .page-header h1 { margin: 20px 0 10px; font-size: 28px; font-weight: 700; letter-spacing: 1px; }
+        .page-header .subtitle { font-size: 14px; font-weight: 500; }
+
+        .content-card { border: 4px double #004080; border-radius: 12px; padding: 12px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .content-inner { padding: 25px; }
+
+        .main-layout { display: grid; grid-template-columns: 380px 1fr; gap: 30px; }
+
+        .section-header { background-color: #004080; color: #ffffff; padding: 12px 16px; margin-bottom: 15px; border-radius: 6px; display: flex; align-items: center; gap: 12px; }
+        .section-icon { background: #ffffff; color: #004080; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+        .section-title { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+
+        .form-group { margin-bottom: 12px; }
+        .form-label { display: block; color: #004080; font-size: 11px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-input, .form-select { width: 100%; padding: 8px 10px; border: 2px solid #004080; border-radius: 6px; font-size: 12px; font-family: 'Oswald', Arial, sans-serif; font-weight: 500; color: #000; background: #ffffff; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0,64,128,0.1); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .btn-primary { padding: 10px 16px; background: #004080; color: #ffffff; border: 2px solid #004080; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-family: 'Oswald', Arial, sans-serif; transition: all 0.3s; width: 100%; }
+        .btn-primary:hover { background: #0056b3; border-color: #0056b3; }
+        .btn-gold { padding: 12px 20px; background: #ffc107; color: #000000; border: 2px solid #ffc107; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-family: 'Oswald', Arial, sans-serif; transition: all 0.3s; }
+        .btn-gold:hover { background: #e0a800; border-color: #e0a800; }
+        .btn-secondary { padding: 10px 16px; background: #ffffff; color: #004080; border: 2px solid #004080; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-family: 'Oswald', Arial, sans-serif; transition: all 0.3s; }
+        .btn-secondary:hover { background: #004080; color: #ffffff; }
+        .btn-success { padding: 12px 20px; background: #28a745; color: #ffffff; border: 2px solid #28a745; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-family: 'Oswald', Arial, sans-serif; transition: all 0.3s; }
+        .btn-success:hover { background: #218838; border-color: #218838; }
+
+        .upload-zone { border: 2px dashed #004080; border-radius: 8px; padding: 20px; text-align: center; background: #f8f9fa; cursor: pointer; transition: all 0.3s; margin-bottom: 15px; }
+        .upload-zone:hover { background: #e7f3ff; border-color: #0056b3; }
+        .upload-zone.dragover { background: #cce5ff; border-color: #004080; }
+        .upload-zone-icon { font-size: 32px; margin-bottom: 10px; }
+        .upload-zone-text { font-size: 12px; color: #000; }
+        .upload-zone-text strong { color: #004080; }
+
+        .data-preview { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; margin-top: 10px; }
+        .data-preview table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .data-preview th, .data-preview td { padding: 6px 8px; border-bottom: 1px solid #eee; text-align: left; }
+        .data-preview th { background: #004080; color: white; position: sticky; top: 0; }
+        .data-preview tr:hover { background: #f5f5f5; }
+        .data-count { background: #e7f3ff; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 12px; color: #004080; }
+
+        .preview-section { background: #f8f9fa; border: 2px solid #004080; border-radius: 8px; padding: 20px; position: sticky; top: 20px; }
+        .preview-title { font-size: 14px; font-weight: 700; color: #004080; margin-bottom: 15px; text-transform: uppercase; text-align: center; }
+        .voucher-wrapper { display: flex; justify-content: center; padding: 20px; background: repeating-linear-gradient(45deg, #e9ecef, #e9ecef 10px, #f8f9fa 10px, #f8f9fa 20px); border-radius: 8px; overflow: auto; }
+
+        /* ══ SCHOOL QR CARD ══ */
+        .school-card {
+            width: 420px;
+            height: 210px;
+            font-family: 'Oswald', Arial, sans-serif;
+            display: grid;
+            grid-template-columns: 1fr 158px;
+            background: #ffffff;
+            border: 1px solid #c8d4e0;
+            border-top: 3px solid #004080;
+            border-radius: 4px;
+            /* NO overflow:hidden — was clipping QR corner finder squares */
+        }
+        .sc-main { padding: 12px 14px; display: flex; flex-direction: column; border-right: 1px dashed #dde3ee; overflow: hidden; }
+        .sc-badge { display: inline-block; background: #e8f0f8; color: #004080; font-size: 6.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; margin-bottom: 7px; border: 1px solid #c5d8f0; width: fit-content; }
+        .sc-school { font-size: 12px; font-weight: 700; line-height: 1.25; margin-bottom: 5px; color: #004080; }
+        .sc-community { font-size: 9px; color: #000; margin-bottom: 3px; }
+        .sc-phu { font-size: 8.5px; color: #000; margin-bottom: 3px; }
+        .sc-district { font-size: 8px; color: #000; margin-bottom: auto; }
+        .sc-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 7px; padding-top: 6px; border-top: 1px solid #e0e8f0; }
+        .sc-enroll { font-size: 8px; color: #000; line-height: 1.2; }
+        .sc-enroll strong { color: #000; font-size: 13px; font-weight: 700; display: block; line-height: 1; }
+        .sc-emis { font-size: 7px; color: #000; margin-bottom: 2px; text-align: right; }
+        .sc-status { font-size: 7px; font-weight: 700; padding: 2px 7px; border-radius: 2px; text-transform: uppercase; letter-spacing: .4px; }
+        .sc-status.old { background: #eaf3de; color: #3b6d11; border: 1px solid #c0dd97; }
+        .sc-status.new { background: #faeeda; color: #854f0b; border: 1px solid #fac775; }
+
+        /* ══ QR SECTION — single clean QR, all 4 corners visible ══ */
+        .sc-qr-section { background: #f8f9fa; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 10px 10px 8px; border-radius: 0 6px 6px 0; overflow: visible; }
+        /* White quiet-zone wrapper — extra padding keeps QR finder squares away from rounded card corners */
+        .sc-qr-box { padding: 7px; border-radius: 3px; background: #ffffff; border: 1px solid #dde3ee; display: inline-flex; }
+        .sc-qr-container { width: 112px; height: 112px; position: relative; flex-shrink: 0; }
+        /* Keep only the canvas; QRCode.js also injects a duplicate <img> — hide it */
+        .sc-qr-container canvas { width: 112px !important; height: 112px !important; display: block !important; }
+        .sc-qr-container img   { display: none !important; }
+        .sc-qr-label { font-size: 6px; margin-top: 5px; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; color: #000; text-align: center; }
+        .sc-qr-icfsl { font-size: 5.5px; color: #555; font-weight: 600; margin-top: 1px; text-align: center; }
+
+        .download-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+
+        .notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 15px 30px; border-radius: 8px; font-weight: 600; z-index: 2000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .notification.success { background: #d4edda; color: #155724; border: 2px solid #28a745; display: block; }
+        .notification.error { background: #f8d7da; color: #721c24; border: 2px solid #dc3545; display: block; }
+
+        .page-footer { background-color: #004080; color: #ffffff; padding: 20px 30px; text-align: center; font-size: 13px; line-height: 1.7; font-weight: 500; border-radius: 0 0 8px 8px; }
+        .page-footer p { margin: 6px 0 0; font-size: 12px; }
+
+        .tabs { display: flex; gap: 0; margin-bottom: 15px; }
+        .tab { padding: 10px 20px; background: #e9ecef; border: 2px solid #004080; border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 12px; color: #004080; }
+        .tab.active { background: #004080; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .progress-bar { width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #004080, #0056b3); transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: 600; }
+
+        .json-preview { background: #f0f4f8; border: 1px solid #c8d4e0; border-radius: 6px; padding: 8px 10px; font-size: 9px; font-family: monospace; color: #004080; word-break: break-all; max-height: 58px; overflow-y: auto; margin-top: 6px; line-height: 1.5; }
+
+        #renderArea { position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -1; }
+
+        @media (max-width: 1200px) { .main-layout { grid-template-columns: 1fr; } .preview-section { position: static; } }
+    </style>
+</head>
+<body>
+<div class="page-container">
+
+    <div class="page-header">
+        <div class="logo-row">
+            <div class="logo-box">
+                <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg"
+                     alt="ICF-SL"
+                     onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\'font-size:22px;font-weight:700;color:#004080\'>ICF</span>'">
+            </div>
+        </div>
+        <h3>Informatics Consultancy Firm-Sierra Leone (ICF-SL)</h3>
+        <p class="tagline"><em>Driving Data-Driven Solutions for Health and Development</em></p>
+        <h1>🏫 SCHOOL QR CODE GENERATOR</h1>
+        <p class="subtitle">SBD 2026 · Generate school QR codes — scan to auto-fill the distribution form</p>
+    </div>
+
+    <div class="content-card">
+        <div class="content-inner">
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('single',this)">Single School</div>
+                <div class="tab" onclick="switchTab('batch',this)">Batch from Excel</div>
+            </div>
+
+            <div class="main-layout">
+
+                <!-- LEFT PANEL -->
+                <div>
+                    <div id="singleTab" class="tab-content active">
+                        <div class="section-header">
+                            <span class="section-icon">1</span>
+                            <span class="section-title">SCHOOL DETAILS</span>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">District *</label>
+                                <input type="text" class="form-input" id="f-district" placeholder="e.g. PORT LOKO" oninput="liveUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Chiefdom *</label>
+                                <input type="text" class="form-input" id="f-chiefdom" placeholder="e.g. BUYA ROMENDE" oninput="liveUpdate()">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Name of PHU (Health Facility) *</label>
+                            <input type="text" class="form-input" id="f-facility" placeholder="e.g. Gbinti CHC" oninput="liveUpdate()">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Community *</label>
+                                <input type="text" class="form-input" id="f-community" placeholder="e.g. GBINTI" oninput="liveUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">School Enrollment</label>
+                                <input type="number" class="form-input" id="f-enrollment" placeholder="e.g. 210" oninput="liveUpdate()">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">School Name *</label>
+                            <input type="text" class="form-input" id="f-school" placeholder="e.g. GBINTI PRIMARY SCHOOL" oninput="liveUpdate()">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">EMIS Number</label>
+                                <input type="text" class="form-input" id="f-emis" placeholder="e.g. 12345" oninput="liveUpdate()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">School Status</label>
+                                <select class="form-select" id="f-status" onchange="liveUpdate()">
+                                    <option value="Old">Old</option>
+                                    <option value="New">New</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="section-header" style="margin-top:15px">
+                            <span class="section-icon">2</span>
+                            <span class="section-title">QR CODE DATA</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Auto-generated JSON</label>
+                            <div class="json-preview" id="json-view">Fill in the school details to generate the QR code.</div>
+                        </div>
+                    </div>
+
+                    <div id="batchTab" class="tab-content">
+                        <div class="section-header">
+                            <span class="section-icon">1</span>
+                            <span class="section-title">UPLOAD EXCEL DATA</span>
+                        </div>
+                        <div class="upload-zone" id="dropzone" onclick="document.getElementById('file-excel').click()">
+                            <div class="upload-zone-icon">📊</div>
+                            <div class="upload-zone-text">
+                                <strong>Click to upload</strong> or drag & drop<br>
+                                Excel file (.xlsx, .xls)
+                            </div>
+                            <input type="file" id="file-excel" accept=".xlsx,.xls" onchange="loadExcel(event)" style="display:none">
+                        </div>
+                        <div class="form-group">
+                            <button class="btn-secondary" onclick="dlTemplate()" style="width:100%">📥 Download Excel Template</button>
+                        </div>
+                        <div id="tbl-container" style="display:none">
+                            <div class="data-count" id="tbl-count"></div>
+                            <div class="data-preview" id="tbl-body"></div>
+                        </div>
+                    </div>
+
+                    <!-- DOWNLOAD BUTTONS -->
+                    <div id="dl-single" class="download-buttons">
+                        <button class="btn-gold" onclick="downloadPNG()">📥 Download PNG</button>
+                        <button class="btn-secondary" onclick="downloadJPEG()">📥 Download JPEG</button>
+                    </div>
+                    <div id="dl-batch" class="download-buttons" style="display:none">
+                        <button class="btn-success" onclick="genPDF()">📄 Generate PDF (A4 — 10 per page)</button>
+                    </div>
+                    <div id="prog-container" style="display:none;margin-top:15px">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="prog-fill" style="width:0%">0%</div>
+                        </div>
+                        <div style="text-align:center;font-size:11px;color:#000;margin-top:5px" id="prog-txt">Generating...</div>
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL — PREVIEW -->
+                <div class="preview-panel">
+                    <div class="preview-section">
+                        <div class="preview-title">📱 Live Preview</div>
+                        <div class="voucher-wrapper">
+                            <div class="school-card" id="card-preview"></div>
+                        </div>
+                        <div style="margin-top:12px;background:#e8f5ee;border:1px solid #b2dfcc;border-radius:6px;padding:10px 12px;font-size:11px;color:#000;text-align:center;line-height:1.6">
+                            When scanned in the SBD app this QR auto-fills:
+                            District, Chiefdom, PHU, Community, School Name, Enrollment, EMIS, Status
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="page-footer">
+        <p style="margin:0;font-weight:700">Informatics Consultancy Firm-Sierra Leone (ICF-SL)</p>
+        <p>SBD 2026 · National Malaria Control Programme · School QR Code Generator</p>
+        <p style="font-size:10px">© 2026 Informatics Consultancy Firm-Sierra Leone (ICF-SL)</p>
+    </div>
+
+</div>
+<div class="notification" id="notification"></div>
+<div id="renderArea"></div>
+
+<script>
+    var rows = [];
+
+    // ── TABS ──────────────────────────────────────────────────
+    function switchTab(tab, el) {
+        document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+        el.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+        document.getElementById(tab + 'Tab').classList.add('active');
+        document.getElementById('dl-single').style.display = tab === 'single' ? 'flex' : 'none';
+        document.getElementById('dl-batch').style.display  = (tab === 'batch' && rows.length > 0) ? 'flex' : 'none';
+        if (tab === 'single') liveUpdate();
+        if (tab === 'batch' && rows.length > 0) drawCard(rows[0], document.getElementById('card-preview'));
+    }
+
+    // ── FIELD HELPER ─────────────────────────────────────────
+    function gv(r) {
+        var keys = Array.prototype.slice.call(arguments, 1);
+        for (var i = 0; i < keys.length; i++) {
+            if (r[keys[i]] !== undefined && r[keys[i]] !== null) {
+                var v = String(r[keys[i]]).trim();
+                if (v && v !== 'undefined') return v;
+            }
+        }
+        return '';
+    }
+
+    // ── BUILD QR JSON ─────────────────────────────────────────
+    function buildQR(r) {
+        var d = {
+            district:     gv(r, 'district',     'District'),
+            chiefdom:     gv(r, 'chiefdom',     'Chiefdom'),
+            facility:     gv(r, 'facility',     'Name of PHU', 'phu'),
+            community:    gv(r, 'community',    'Community'),
+            school_name:  gv(r, 'school_name',  'School Name'),
+            enrollment:   gv(r, 'enrollment',   'School enrollment', 'School Enrollment'),
+            emis_number:  gv(r, 'emis_number',  'EMIS Number', 'emis'),
+            school_status:gv(r, 'school_status','School Status') || 'Old'
+        };
+        Object.keys(d).forEach(function(k){ if (!d[k]) delete d[k]; });
+        return JSON.stringify(d);
+    }
+
+    // ── DRAW CARD + QR ────────────────────────────────────────
+    function drawCard(r, container, callback) {
+        var district   = gv(r, 'district',     'District');
+        var chiefdom   = gv(r, 'chiefdom',     'Chiefdom');
+        var facility   = gv(r, 'facility',     'Name of PHU', 'phu');
+        var community  = gv(r, 'community',    'Community');
+        var school     = gv(r, 'school_name',  'School Name');
+        var enrollment = gv(r, 'enrollment',   'School enrollment', 'School Enrollment');
+        var emis       = gv(r, 'emis_number',  'EMIS Number', 'emis');
+        var status     = gv(r, 'school_status','School Status') || 'Old';
+        var stCls      = status.toLowerCase() === 'new' ? 'new' : 'old';
+        var qrData     = buildQR(r);
+        var qid        = 'qr' + Date.now() + Math.floor(Math.random() * 99999);
+
+        container.innerHTML =
+            '<div class="sc-main">' +
+                '<div class="sc-badge">SBD 2026 · ICF-SL</div>' +
+                '<div class="sc-school">' + (school || 'School Name') + '</div>' +
+                '<div class="sc-community">' + (community || '—') + (chiefdom ? ', ' + chiefdom : '') + '</div>' +
+                '<div class="sc-phu">' + (facility || '—') + '</div>' +
+                '<div class="sc-district">' + (district || '—') + '</div>' +
+                '<div class="sc-footer">' +
+                    '<div class="sc-enroll"><strong>' + (enrollment || '—') + '</strong>pupils enrolled</div>' +
+                    '<div style="text-align:right">' +
+                        (emis ? '<div class="sc-emis">EMIS: ' + emis + '</div>' : '') +
+                        '<div class="sc-status ' + stCls + '">' + status + '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="sc-qr-section">' +
+                '<div class="sc-qr-box"><div class="sc-qr-container" id="' + qid + '"></div></div>' +
+                '<div class="sc-qr-label">Scan to fill form</div>' +
+                '<div class="sc-qr-icfsl">ICF-SL · NMCP</div>' +
+            '</div>';
+
+        var qrEl = document.getElementById(qid);
+        if (qrEl && qrData.length > 5) {
+            try {
+                new QRCode(qrEl, {
+                    text: qrData,
+                    width: 120,
+                    height: 120,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.L  // L = least dense → cleaner corners
+                });
+                setTimeout(function() {
+                    // Hide the duplicate <img> QRCode.js injects — keep only the <canvas>
+                    var imgs     = qrEl.querySelectorAll('img');
+                    var canvases = qrEl.querySelectorAll('canvas');
+                    imgs.forEach(function(img) { img.style.display = 'none'; });
+                    canvases.forEach(function(c) {
+                        c.style.width  = '112px';
+                        c.style.height = '112px';
+                        c.style.display = 'block';
+                    });
+                    if (callback) callback();
+                }, 80);
+            } catch(e) {
+                if (callback) callback();
+            }
+        } else {
+            if (callback) callback();
+        }
+    }
+
+    // ── SINGLE LIVE UPDATE ────────────────────────────────────
+    function liveUpdate() {
+        var r = {
+            district:     document.getElementById('f-district').value,
+            chiefdom:     document.getElementById('f-chiefdom').value,
+            facility:     document.getElementById('f-facility').value,
+            community:    document.getElementById('f-community').value,
+            school_name:  document.getElementById('f-school').value,
+            enrollment:   document.getElementById('f-enrollment').value,
+            emis_number:  document.getElementById('f-emis').value,
+            school_status:document.getElementById('f-status').value
+        };
+        drawCard(r, document.getElementById('card-preview'));
+        document.getElementById('json-view').textContent = buildQR(r);
+    }
+
+    // ── DOWNLOAD SINGLE ───────────────────────────────────────
+    function captureCard(fmt, quality) {
+        var el = document.getElementById('card-preview');
+        showNotification('Generating image...', 'success');
+        html2canvas(el, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' })
+        .then(function(canvas) {
+            var name = (document.getElementById('f-school').value || 'school').replace(/\s+/g, '_');
+            var a = document.createElement('a');
+            a.download = 'QR_' + name + '.' + fmt;
+            a.href = canvas.toDataURL('image/' + fmt, quality);
+            a.click();
+            showNotification('Downloaded!', 'success');
+        })
+        .catch(function() { showNotification('Error generating image', 'error'); });
+    }
+    function downloadPNG()  { captureCard('png',  1.0); }
+    function downloadJPEG() { captureCard('jpeg', 0.95); }
+
+    // ── EXCEL UPLOAD ──────────────────────────────────────────
+    function loadExcel(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                var wb   = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                var data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                if (!data.length) { showNotification('File is empty', 'error'); return; }
+                rows = data;
+                renderTable();
+                document.getElementById('dl-batch').style.display = 'flex';
+                drawCard(rows[0], document.getElementById('card-preview'));
+                showNotification('Loaded ' + rows.length + ' schools!', 'success');
+            } catch(err) { showNotification('Error reading file', 'error'); }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function renderTable() {
+        var headers = Object.keys(rows[0]);
+        var html = '<table><thead><tr>';
+        headers.forEach(function(h) { html += '<th>' + h + '</th>'; });
+        html += '</tr></thead><tbody>';
+        rows.slice(0, 8).forEach(function(r) {
+            html += '<tr>';
+            headers.forEach(function(h) { html += '<td>' + (r[h] || '') + '</td>'; });
+            html += '</tr>';
+        });
+        if (rows.length > 8) html += '<tr><td colspan="' + headers.length + '" style="text-align:center;color:#666">… and ' + (rows.length - 8) + ' more rows</td></tr>';
+        html += '</tbody></table>';
+        document.getElementById('tbl-body').innerHTML = html;
+        document.getElementById('tbl-count').innerHTML = '📊 <strong>' + rows.length + '</strong> schools — ' + Math.ceil(rows.length / 10) + ' pages (10 per page)';
+        document.getElementById('tbl-container').style.display = 'block';
+    }
+
+    // ── TEMPLATE DOWNLOAD ─────────────────────────────────────
+    function dlTemplate() {
+        var data = [
+            { district:'PORT LOKO', chiefdom:'BUYA ROMENDE', 'Name of PHU':'Gbinti CHC', community:'GBINTI', 'School Name':'GBINTI PRIMARY SCHOOL', 'School enrollment':210, 'EMIS Number':10001, 'School Status':'Old' },
+            { district:'PORT LOKO', chiefdom:'BUYA ROMENDE', 'Name of PHU':'Gbinti CHC', community:'MAKENI', 'School Name':'DEC PRIMARY SCHOOL', 'School enrollment':185, 'EMIS Number':10002, 'School Status':'Old' },
+            { district:'KOINADUGU', chiefdom:'DIANG', 'Name of PHU':'Badala MCHP', community:'DIANG BADALA', 'School Name':'ROMAN CATHOLIC PRIMARY SCHOOL', 'School enrollment':189, 'EMIS Number':10003, 'School Status':'Old' },
+            { district:'BONTHE', chiefdom:'BENDU-CHA', 'Name of PHU':'Mattru CHC', community:'MATTRU', 'School Name':'MATTRU PRIMARY SCHOOL', 'School enrollment':240, 'EMIS Number':'', 'School Status':'New' },
+            { district:'Pujehun', chiefdom:'BARRI', 'Name of PHU':'Pujehun Govt Hospital', community:'PUJEHUN', 'School Name':'PUJEHUN PRIMARY SCHOOL', 'School enrollment':310, 'EMIS Number':10005, 'School Status':'Old' }
+        ];
+        var ws = XLSX.utils.json_to_sheet(data);
+        ws['!cols'] = [14,16,18,16,32,10,12,12].map(function(w) { return { wch: w }; });
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Schools');
+        XLSX.writeFile(wb, 'SBD2026_school_qr_template.xlsx');
+        showNotification('Template downloaded!', 'success');
+    }
+
+    // ── GENERATE PDF — 10 per page (2 cols × 5 rows) ─────────
+    async function genPDF() {
+        if (!rows.length) { showNotification('No data loaded', 'error'); return; }
+
+        var pdf  = new window.jspdf.jsPDF('p', 'mm', 'a4');
+        var pw = 210;
+        var mg = 10;
+        var gap = 6;
+        var cols = 2, rowsPerPage = 5;
+        var cw = (pw - mg * 2 - gap * (cols - 1)) / cols;   // ~92mm
+        // Derive height from card's actual pixel aspect ratio — prevents stretch
+        var cardPixelW = 420, cardPixelH = 210;
+        var ch = cw * (cardPixelH / cardPixelW);             // exact 2:1 ratio → ~46mm
+
+        var area  = document.getElementById('renderArea');
+        var pfill = document.getElementById('prog-fill');
+        var ptxt  = document.getElementById('prog-txt');
+        document.getElementById('prog-container').style.display = 'block';
+
+        for (var i = 0; i < rows.length; i++) {
+            var el = document.createElement('div');
+            el.className = 'school-card';
+            el.style.cssText = 'width:420px;height:210px;';
+            area.appendChild(el);
+
+            await new Promise(function(resolve) {
+                drawCard(rows[i], el, function() {
+                    setTimeout(resolve, 150);
+                });
+            });
+
+            var canvas = await html2canvas(el, {
+                scale: 4,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: 420,
+                width: 420,
+                height: 210
+            });
+
+            var col    = i % cols;
+            var rowNum = Math.floor(i / cols) % rowsPerPage;
+            if (i > 0 && i % (cols * rowsPerPage) === 0) pdf.addPage();
+
+            var x = mg + col * (cw + gap);
+            var y = mg + rowNum * (ch + gap);
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, cw, ch);
+            area.removeChild(el);
+
+            var pct = Math.round((i + 1) / rows.length * 100);
+            pfill.style.width = pct + '%';
+            pfill.textContent = pct + '%';
+            ptxt.textContent  = 'Generating card ' + (i + 1) + ' of ' + rows.length + '…';
+        }
+
+        ptxt.textContent = 'Saving PDF…';
+        pdf.save('SBD2026_School_QR_Codes_' + new Date().toISOString().split('T')[0] + '.pdf');
+        document.getElementById('prog-container').style.display = 'none';
+        showNotification('PDF saved — ' + rows.length + ' school QR cards!', 'success');
+    }
+
+    // ── NOTIFICATION ──────────────────────────────────────────
+    function showNotification(msg, type) {
+        var el = document.getElementById('notification');
+        el.textContent = msg;
+        el.className = 'notification ' + type;
+        clearTimeout(el._t);
+        el._t = setTimeout(function() { el.className = 'notification'; }, 3500);
+    }
+
+    // ── DRAG & DROP ───────────────────────────────────────────
+    var dz = document.getElementById('dropzone');
+    dz.addEventListener('dragover',  function(e) { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', function()  { dz.classList.remove('dragover'); });
+    dz.addEventListener('drop', function(e) {
+        e.preventDefault(); dz.classList.remove('dragover');
+        var f = e.dataTransfer.files[0];
+        if (f && (f.name.endsWith('.xlsx') || f.name.endsWith('.xls'))) {
+            loadExcel({ target: { files: [f] } });
+        } else { showNotification('Please upload an Excel file (.xlsx or .xls)', 'error'); }
+    });
+
+    document.addEventListener('DOMContentLoaded', liveUpdate);
+</script>
+</body>
+</html>
