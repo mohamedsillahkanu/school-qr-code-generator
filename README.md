@@ -1,0 +1,1 @@
+# school-qr-code-generator
